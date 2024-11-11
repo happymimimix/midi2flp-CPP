@@ -439,7 +439,7 @@ bool MidiFile::readSmf(std::istream& input) {
 	for (int i=0; i<tracks; i++) {
 		runningCommand = 0;
 
-		// std::cout << "\nReading Track: " << i + 1 << flush;
+		std::cout << "\nReading Track: " << i + 1;
 
 		// read track header...
 

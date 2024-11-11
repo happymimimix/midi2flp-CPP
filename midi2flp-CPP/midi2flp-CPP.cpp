@@ -117,28 +117,29 @@ int main(int argc, char** argv) {
         Input_MIDI.read(FileName);
         ofstream Output_FLP(FileName + ".flp", ios::binary);
         vector<uint8_t> FLhd_Data;
-        for (uint8_t NUM : TO_BYTES_BIG_UINT8(Input_MIDI.getTrackCount(), 3))
+        FLhd_Data.push_back(0x00);
+        FLhd_Data.push_back(0x00);
+        for (uint8_t NUM : TO_BYTES_LITTLE_UINT8(Input_MIDI.getTrackCount(), 2))
         {
             FLhd_Data.push_back(NUM);
         }
-        FLhd_Data.push_back(0);
         for (uint8_t NUM : TO_BYTES_LITTLE_UINT8(Input_MIDI.getTicksPerQuarterNote(), 2))
         {
             FLhd_Data.push_back(NUM);
         }
         vector<uint8_t> FLdt_Data;
         Make_FL_Event(FLdt_Data, 199, vector<uint8_t>{'8', '.', '0', '.', '0', 0});
-        Make_FL_Event(FLdt_Data, 93, vector<uint8_t>{0});
-        Make_FL_Event(FLdt_Data, 66, vector<uint8_t>{140});
-        Make_FL_Event(FLdt_Data, 67, vector<uint8_t>{1});
-        Make_FL_Event(FLdt_Data, 9, vector<uint8_t>{1});
-        Make_FL_Event(FLdt_Data, 11, vector<uint8_t>{0});
-        Make_FL_Event(FLdt_Data, 80, vector<uint8_t>{0});
-        Make_FL_Event(FLdt_Data, 17, vector<uint8_t>{16});
-        Make_FL_Event(FLdt_Data, 24, vector<uint8_t>{16});
-        Make_FL_Event(FLdt_Data, 18, vector<uint8_t>{4});
-        Make_FL_Event(FLdt_Data, 23, vector<uint8_t>{1});
-        Make_FL_Event(FLdt_Data, 10, vector<uint8_t>{0});
+        Make_FL_Event(FLdt_Data, 93, vector<uint8_t>{0x00});
+        Make_FL_Event(FLdt_Data, 66, vector<uint8_t>{0xFF,0xFF});
+        Make_FL_Event(FLdt_Data, 67, vector<uint8_t>{0x01});
+        Make_FL_Event(FLdt_Data, 9, vector<uint8_t>{0x01});
+        Make_FL_Event(FLdt_Data, 11, vector<uint8_t>{0x00});
+        Make_FL_Event(FLdt_Data, 80, vector<uint8_t>{0x00});
+        Make_FL_Event(FLdt_Data, 17, vector<uint8_t>{0x10});
+        Make_FL_Event(FLdt_Data, 24, vector<uint8_t>{0x10});
+        Make_FL_Event(FLdt_Data, 18, vector<uint8_t>{0x04});
+        Make_FL_Event(FLdt_Data, 23, vector<uint8_t>{0x01});
+        Make_FL_Event(FLdt_Data, 10, vector<uint8_t>{0x00});
         Make_FL_Event(FLdt_Data, 65, std::vector<uint8_t>{1});
         Make_FL_Event(FLdt_Data, 193, std::vector<uint8_t>{'m', 'i', 'd', 'i', '2', 'f', 'l', 'p', ' ', 'a', 'u', 't', 'o', ' ', 'g', 'e', 'n', 'e', 'r', 'a', 't', 'e', 'd', ' ', 'd', 'a', 't', 'a', 0});
 
@@ -163,7 +164,7 @@ int main(int argc, char** argv) {
             vector<FL_Event> TempNoteBin(ceil(static_cast<float>(Input_MIDI.getEventCount(TrackID)) / 2.0f));
             queue<MidiNote> NoteQueue[256 * 16];
             size_t NoteCount = 0;
-            string TrackName = "";
+            string TrackName = "MIDI Out";
             for (size_t EventIDX = 0; EventIDX < Input_MIDI.getEventCount(TrackID); EventIDX++) {
                 MidiEvent Event = Input_MIDI[TrackID][EventIDX];
                 if (Event.isNoteOn()) {
@@ -173,18 +174,7 @@ int main(int argc, char** argv) {
                     NoteQueue[Event.getChannel() * 256 + Event.getKeyNumber()].push(Note);
                 }
                 else if (Event.isNoteOff()) {
-                    if (NoteQueue[Event.getChannel() * 256 + Event.getKeyNumber()].empty()) {
-                        cout << "Error: Note off without note on at tick ";
-                        cout << Event.tick;
-                        cout << " on track ";
-                        cout << TrackID;
-                        cout << " which turns off note ";
-                        cout << Event.getKeyNumber();
-                        cout << " on channel ";
-                        cout << Event.getChannel();
-                        cout << "\n";
-                    }
-                    else {
+                    if (!(NoteQueue[Event.getChannel() * 256 + Event.getKeyNumber()].empty())) {
                         MidiNote Note = NoteQueue[Event.getChannel() * 256 + Event.getKeyNumber()].front();
                         NoteQueue[Event.getChannel() * 256 + Event.getKeyNumber()].pop();
                         FL_Event& FL_Note = TempNoteBin[NoteCount];
@@ -204,35 +194,38 @@ int main(int argc, char** argv) {
                     }
                 }
                 else if (Event.isTrackName()) {
-                    TrackName = Event.getMetaContent();
+                    string Content = Event.getMetaContent();
+                    if (Content.length() > 0) {
+                        TrackName = Content;
+                    }
                 }
             }
             {
                 lock_guard<mutex> lock(MutexLock);
                 cout << "Converted Track: ";
-                cout << TrackID;
+                cout << TrackID+1;
                 cout << "\n";
                 MainNoteBin.insert(MainNoteBin.end(), TempNoteBin.begin(), TempNoteBin.begin() + NoteCount);
-                Make_FL_Event(FLdt_Data, 64, vector<uint8_t>{static_cast<uint8_t>(TrackID)});
-                Make_FL_Event(FLdt_Data, 21, vector<uint8_t>{2});
+                Make_FL_Event(FLdt_Data, 64, TO_BYTES_LITTLE_UINT8(static_cast<uint16_t>(TrackID),2));
+                Make_FL_Event(FLdt_Data, 21, vector<uint8_t>{0x02}); // Plugin type
                 Make_FL_Event(FLdt_Data, 201, vector<uint8_t>{'M', 'I', 'D', 'I', ' ', 'O', 'u', 't', 0});
                 Make_FL_Event(FLdt_Data, 212, vector<uint8_t>(ID_Plugin_New, ID_Plugin_New + 24));
-                if (TrackName.length() > 0) {
-                    TrackName += (char)0x00;
-                    Make_FL_Event(FLdt_Data, 192, vector<uint8_t>(TrackName.begin(), TrackName.end()));
-                }
+                TrackName += ' ';
+                TrackName += '#';
+                TrackName += to_string(TrackID+1);
+                TrackName += (char)0x00;
+                Make_FL_Event(FLdt_Data, 192, vector<uint8_t>(TrackName.begin(), TrackName.end()));
                 Make_FL_Event(FLdt_Data, 213, vector<uint8_t>(ID_Plugin_Parameters, ID_Plugin_Parameters + 384));
             }
         });
 
         cout << "Sorting events... \n";
         sort(MainNoteBin.begin(), MainNoteBin.end(), [](FL_Event& NoteA, FL_Event& NoteB) {return NoteA.pos < NoteB.pos; });
-
-        cout << "Writing FLP... \n";
         size_t ByteSize = MainNoteBin.size() * sizeof(FL_Event);
         vector<uint8_t> BytesNoteBin(ByteSize);
         memcpy(BytesNoteBin.data(), MainNoteBin.data(), ByteSize);
 
+        cout << "Writing FLP... \n";
         Make_FL_Event(FLdt_Data, 224, BytesNoteBin);
         Make_FL_Event(FLdt_Data, 129, TO_BYTES_LITTLE_UINT8(65536, sizeof(uint32_t)));
 
