@@ -45,6 +45,7 @@ string OpenMidiFileDialog()
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = sizeof(szFile);
     ofn.lpstrFilter = "MIDI Files\0*.MID;*.MIDI\0All Files\0*.*\0";
+    ofn.lpstrTitle = "midi2flp v1.03";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
