@@ -136,8 +136,8 @@ int main(int argc, char** argv) {
         Make_FL_Event(FLdt_Data, 9, vector<uint8_t>{0x01});
         Make_FL_Event(FLdt_Data, 11, vector<uint8_t>{0x00});
         Make_FL_Event(FLdt_Data, 80, vector<uint8_t>{0x00});
-        Make_FL_Event(FLdt_Data, 17, vector<uint8_t>{0x10});
-        Make_FL_Event(FLdt_Data, 24, vector<uint8_t>{0x10});
+        Make_FL_Event(FLdt_Data, 24, vector<uint8_t>{0xFF});
+        Make_FL_Event(FLdt_Data, 17, vector<uint8_t>{0x04});
         Make_FL_Event(FLdt_Data, 18, vector<uint8_t>{0x04});
         Make_FL_Event(FLdt_Data, 23, vector<uint8_t>{0x01});
         Make_FL_Event(FLdt_Data, 10, vector<uint8_t>{0x00});
